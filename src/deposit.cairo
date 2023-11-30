@@ -65,3 +65,29 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     return ()
 end
 
+@external
+func withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(amount : Uint256):
+    alloc_locals
+
+    with_attr error_message("Vault: Amount cannot be 0"):
+        let (is_amount_zero) = uint256_eq(amount, Uint256(0, 0))
+        assert is_amount_zero = FALSE
+    end
+
+    let (token_address) = token.read()
+    let (caller_address) = get_caller_address()
+    let (contract_address) = get_contract_address()
+
+    let amount_lp_token = amount
+    let (supply_lp_token) = IERC20.totalSupply(contract_address)
+    let (balance_token) = IERC20.balanceOf(token_address, contract_address)
+
+    let (res_mul, carry) = uint256_mul(amount_lp_token, balance_token)
+    let (amount_token, remainder) = uint256_unsigned_div_rem(res_mul, supply_lp_token)
+
+    ERC20._burn(caller_address, amount_lp_token)
+    IERC20.transfer(token_address, caller_address, amount_token)
+
+    return ()
+end
+
